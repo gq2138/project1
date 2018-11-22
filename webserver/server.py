@@ -36,8 +36,8 @@ app = Flask(__name__, template_folder=tmpl_dir)
 # For your convenience, we already set it to the class database
 
 # Use the DB credentials you received by e-mail
-DB_USER = "YOUR_DB_USERNAME_HERE"
-DB_PASSWORD = "YOUR_DB_PASSWORD_HERE"
+DB_USER = "yq2247"
+DB_PASSWORD = "694574bd"
 
 DB_SERVER = "w4111.cisxo09blonu.us-east-1.rds.amazonaws.com"
 
@@ -120,7 +120,7 @@ def index():
   #
   # example of a database query
   #
-  cursor = g.conn.execute("SELECT name FROM test")
+  cursor = g.conn.execute("SELECT Name FROM Restaurant limit 5")
   names = []
   for result in cursor:
     names.append(result['name'])  # can also be accessed using result[0]
@@ -160,7 +160,15 @@ def index():
   # for example, the below file reads template/index.html
   #
   return render_template("index.html", **context)
-
+  
+  cmd1 = 'SELECT distinct Cuisine_Type FROM CuisineType'
+  cursor = g.conn.execute(text(cmd1));
+  cui = []
+  for result in cursor:
+    cui.append(result[0])
+  cursor.close()
+  context1 = dict(data1 = cui)
+  return render_template("index",**context1)
 #
 # This is an example of a different path.  You can see it at
 # 
@@ -183,12 +191,55 @@ def add():
   g.conn.execute(text(cmd), name1 = name, name2 = name);
   return redirect('/')
 
+@app.route('/search', methods=['POST'])
+def search():
+   pl = request.form['Price_level']
+   ct = request.form['Cuisine_Type']
+   print pl
+   print ct
+   cmd = 'SELECT R.Name,R.LongAddress FROM Restaurant R,CuisineType C  WHERE R.Price_level = (:pl1) AND C.Cuisine_Type = (:ct1) AND C.RID = R.RID';
+   cursor = g.conn.execute(text(cmd),pl1 = pl,ct1 = ct);
+   results = []
+   for result in cursor:
+	   for i in range(len(result)):
+		   results.append(result[i])
+   cursor.close()
+   context = dict(data = results)
+   return render_template("search.html", **context)
+
+@app.route('/locate', methods=['POST'])
+def locate():
+    lo = request.form['lo']
+    la = request.form['la']
+    cmd = 'SELECT R.name FROM  Restaurant R,Address A WHERE R.LongAddress = A.LongAddress ORDER BY (A.Longitude - (:lo1))^2 + (A.Latitude-(:la1))^2 LIMIT 5';
+    cursor = g.conn.execute(text(cmd),lo1 = lo,la1 = la)
+    Name = []
+    for result in cursor:
+	    Name.append(result[0])  # can also be accessed using result[0]
+    cursor.close()
+    context = dict(data = Name)
+    return render_template("locate.html", **context)
+
+@app.route('/afterlog',methods = ['POST'])
+def afterlog():
+    cmd1 = 'SELECT distinct Cuisine_Type FROM CuisineType'
+    cursor1 = g.conn.execute(text(cmd1));
+    cui = []
+    for result in cursor1:
+	    cui.append(result[0])
+    cursor.close()
+    context1 = dict(data1 = cui)
+    return render_template("index.html",**context1)
+
 
 @app.route('/login')
 def login():
     abort(401)
     this_is_never_executed()
 
+@app.route('/after')
+def after():
+    return render_template("afterlog.html")
 
 if __name__ == "__main__":
   import click
